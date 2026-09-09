@@ -32,5 +32,6 @@ podman run -it --rm --net=host --uidmap 0:1:1000 --uidmap 1000:0:1 --uidmap 1001
   {% if hub_clusterconfigs_path is defined and hub_clusterconfigs_path | length > 0 %}-v {{ hub_clusterconfigs_path }}:/clusterconfigs:Z \
   {% endif %}
   {{ eco_gotests_image }}:{{ eco_gotests_tag }} \
-  --timeout={{ test_timeout }} \
+  {% if enable_junit_report | default(false) %}--junit-report=/tmp/reports/report.xml \
+  {% endif %}--timeout={{ test_timeout }} \
   --keep-going
