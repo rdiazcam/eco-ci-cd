@@ -118,6 +118,32 @@
       ansible.builtin.set_fact:
         report_files: "{{ found_files.files | map(attribute='path') | list }}"
 
+    - name: Copy Polarion-only reports to separate directory
+      ansible.builtin.copy:
+        src: "{{ polarion_only_report_dir }}/"
+        dest: "{{ reports_directory }}_polarion_only/"
+        remote_src: "{{ (lookup('ansible.builtin.env', 'SHARED_DIR') | default('')) | length == 0 }}"
+        mode: "0777"
+      when: (polarion_only_report_dir | default('')) | length > 0
+
+    - name: List Polarion-only report files
+      ansible.builtin.find:
+        paths: "{{ reports_directory }}_polarion_only/"
+        patterns: "*.xml"
+        recurse: false
+      register: found_polarion_only_files
+      when: (polarion_only_report_dir | default('')) | length > 0
+
+    - name: Set array of Polarion-only report file paths
+      ansible.builtin.set_fact:
+        polarion_only_files: "{{ found_polarion_only_files.files | map(attribute='path') | list }}"
+      when: (polarion_only_report_dir | default('')) | length > 0
+
+    - name: Initialize empty Polarion-only files list when not set
+      ansible.builtin.set_fact:
+        polarion_only_files: []
+      when: (polarion_only_report_dir | default('')) | length == 0
+
     - name: Copy junit reports to report directory
       ansible.builtin.copy:
         src: "{{ junit_report_dir }}/"
@@ -159,7 +185,7 @@
         PYLARION_TR_VERSION: "{{ cluster_info.resources[0].status.version }}"
         PYLARION_TR_BUILD: "v{{ cluster_info.resources[0].status.version }}"
         PYLARION_TEMPLATE_NAME: "{{ reporter_template_name }}"
-        POLARION_REPORT_PATH: "{{ report_files | join(';') }}"
+        POLARION_REPORT_PATH: "{{ (report_files + polarion_only_files) | join(';') }}"
         JUNIT_REPORT_PATH: "{{ report_junit_files | join(';') }}"
         SAVE_POLARION_TEST_RUN_URL: "true"
       notify:
