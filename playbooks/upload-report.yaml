@@ -136,6 +136,14 @@
       ansible.builtin.set_fact:
         report_junit_files: "{{ found_files.files | map(attribute='path') | list | difference(report_files) }}"
 
+    - name: Override converter.py with patched version if specified
+      ansible.builtin.get_url:
+        url: "{{ cnf_polarion_converter_url }}"
+        dest: "{{ reporter_project_root_dir }}/{{ reporter_project_dest_dir }}/cnf-polarion/converter.py"
+        mode: "0644"
+        force: true
+      when: (cnf_polarion_converter_url | default('')) | length > 0
+
     - name: Gather cluster network information
       register: cluster_info
       environment:
@@ -161,6 +169,7 @@
         PYLARION_TEMPLATE_NAME: "{{ reporter_template_name }}"
         POLARION_REPORT_PATH: "{{ report_files | join(';') }}"
         JUNIT_REPORT_PATH: "{{ report_junit_files | join(';') }}"
+        JUNIT_SUITE_NAME: "{{ junit_suite_name | default('') }}"
         SAVE_POLARION_TEST_RUN_URL: "true"
       notify:
         - Remove reports dir
