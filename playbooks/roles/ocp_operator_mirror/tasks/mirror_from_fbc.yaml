@@ -182,8 +182,16 @@
 
     - name: Parse catalog file into documents
       changed_when: false
+      # The to_json|from_json round trip sanitizes YAML auto-typed values:
+      # unquoted timestamps such as "createdAt: 2025-09-10 10:13:05" (OCP 5.x
+      # FBC catalogs) are parsed into datetime objects, which ansible-core < 2.19
+      # cannot JSON-serialize and stringifies the whole document list into a
+      # single Python repr string, breaking selectattr('schema') downstream.
+      # to_json's fallback encoder converts datetimes to isoformat strings and
+      # from_json re-creates safe objects, so the list survives set_fact on
+      # every ansible-core version.
       ansible.builtin.set_fact:
-        docs: "{{ (cat.content | b64decode) | from_yaml_all | list }}"
+        docs: "{{ (cat.content | b64decode) | from_yaml_all | list | to_json | from_json }}"
 
     - name: Detect package name from catalog
       changed_when: false
